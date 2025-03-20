@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mqtt:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1884:1883"
+    volumes:
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    command: 'mosquitto -c /mosquitto-no-auth.conf'
+
+#  obd2_collector:
+#    build: ./obd2_collector
+#    devices:
+#      - /dev/ttyUSB0:/dev/ttyUSB0
+#    environment:
+#      - MQTT_BROKER=mqtt
+#      - MQTT_PORT=1883
+#    depends_on:
+#      - mqtt
+
+  web_app:
+    build: ./web_app
+    ports:
+      - "8888:3000"
+    environment:
+      - REACT_APP_MQTT_BROKER=mqtt
+      - REACT_APP_MQTT_PORT=1883
+    depends_on:
+      - mqtt
+
+volumes:
+  mosquitto_data:
+  mosquitto_log: 

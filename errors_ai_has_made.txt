@@ -1,0 +1,50 @@
+1.
+   Problem:
+      => ERROR [3/5] COPY requirements.txt .                                                                                                                                                                    0.0s
+      ------
+      > [3/5] COPY requirements.txt .:
+      ------
+      Dockerfile:5
+      --------------------
+         3 |     WORKDIR /app
+         4 |
+         5 | >>> COPY requirements.txt .
+         6 |     RUN pip install --no-cache-dir -r requirements.txt
+         7 |
+      --------------------
+      ERROR: failed to solve: failed to compute cache key: failed to calculate checksum of ref 861cacc3-6eec-42ae-a9ae-e3e6e3405414::ihmbfb8v6d4ktnqwgskyjve44: "/requirements.txt": not found
+      ERROR: Service 'obd2_collector' failed to build : Build failed
+
+   Solution:
+      - Move `requirements.txt` into `obd2_collector`
+
+2.
+   `pip-obd==0.7.2` should be `obd==0.7.2`
+
+3. Problem:
+     => ERROR [4/5] RUN npm install                                                                                                                                                                           26.2s
+    ------
+     > [4/5] RUN npm install:
+    25.83 npm error code ETARGET
+    25.83 npm error notarget No matching version found for gauge-chart@^0.3.0.
+    25.83 npm error notarget In most cases you or one of your dependencies are requesting
+    25.83 npm error notarget a package version that doesn't exist.
+    25.84 npm notice
+    25.84 npm notice New major version of npm available! 10.8.2 -> 11.2.0
+    25.84 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.2.0
+    25.84 npm notice To update run: npm install -g npm@11.2.0
+    25.84 npm notice
+    25.84 npm error A complete log of this run can be found in: /root/.npm/_logs/2025-03-19T23_37_13_186Z-debug-0.log
+    ------
+    Dockerfile:6
+    --------------------
+       4 |
+       5 |     COPY package*.json ./
+       6 | >>> RUN npm install
+       7 |
+       8 |     COPY src ./src
+    --------------------
+ 
+  Solution:
+    gauge-chart has no 0.3.0 version (and has never had one?)
+

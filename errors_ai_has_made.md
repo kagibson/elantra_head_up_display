@@ -1,70 +1,70 @@
-1.
-   Problem:
-      => ERROR [3/5] COPY requirements.txt .                                                                                                                                                                    0.0s
-      ------
-      > [3/5] COPY requirements.txt .:
-      ------
-      Dockerfile:5
-      --------------------
-         3 |     WORKDIR /app
-         4 |
-         5 | >>> COPY requirements.txt .
-         6 |     RUN pip install --no-cache-dir -r requirements.txt
-         7 |
-      --------------------
-      ERROR: failed to solve: failed to compute cache key: failed to calculate checksum of ref 861cacc3-6eec-42ae-a9ae-e3e6e3405414::ihmbfb8v6d4ktnqwgskyjve44: "/requirements.txt": not found
-      ERROR: Service 'obd2_collector' failed to build : Build failed
+# AI Assistant Errors and Solutions Log
 
-   Solution:
-      - Move `requirements.txt` into `obd2_collector`
+This is a running list of errors that the AI agent made in generating this application for me.
 
-2.
-   `pip-obd==0.7.2` should be `obd==0.7.2`
+## 1. Missing Requirements File
+### Problem
+```
+ERROR [3/5] COPY requirements.txt .
+------
+> [3/5] COPY requirements.txt .:
+------
+Dockerfile:5
+--------------------
+   3 |     WORKDIR /app
+   4 |
+   5 | >>> COPY requirements.txt .
+   6 |     RUN pip install --no-cache-dir -r requirements.txt
+   7 |
+--------------------
+ERROR: failed to solve: failed to compute cache key: failed to calculate checksum of ref 861cacc3-6eec-42ae-a9ae-e3e6e3405414::ihmbfb8v6d4ktnqwgskyjve44: "/requirements.txt": not found
+ERROR: Service 'obd2_collector' failed to build : Build failed
+```
+### Solution
+- Move `requirements.txt` into `obd2_collector` directory
 
-3. Problem:
-     => ERROR [4/5] RUN npm install                                                                                                                                                                           26.2s
-    ------
-     > [4/5] RUN npm install:
-    25.83 npm error code ETARGET
-    25.83 npm error notarget No matching version found for gauge-chart@^0.3.0.
-    25.83 npm error notarget In most cases you or one of your dependencies are requesting
-    25.83 npm error notarget a package version that doesn't exist.
-    25.84 npm notice
-    25.84 npm notice New major version of npm available! 10.8.2 -> 11.2.0
-    25.84 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.2.0
-    25.84 npm notice To update run: npm install -g npm@11.2.0
-    25.84 npm notice
-    25.84 npm error A complete log of this run can be found in: /root/.npm/_logs/2025-03-19T23_37_13_186Z-debug-0.log
-    ------
-    Dockerfile:6
-    --------------------
-       4 |
-       5 |     COPY package*.json ./
-       6 | >>> RUN npm install
-       7 |
-       8 |     COPY src ./src
-    --------------------
- 
-  Solution:
-    gauge-chart has no 0.3.0 version (and has never had one?)
+## 2. Incorrect Package Name
+### Problem
+Incorrect package name specified in requirements.txt
+### Solution
+Change `pip-obd==0.7.2` to `obd==0.7.2`
 
+## 3. Invalid Package Version
+### Problem
+```
+=> ERROR [4/5] RUN npm install
+------
+> [4/5] RUN npm install:
+npm error code ETARGET
+npm error notarget No matching version found for gauge-chart@^0.3.0.
+npm error notarget In most cases you or one of your dependencies are requesting
+npm error notarget a package version that doesn't exist.
+```
+### Solution
+- Package `gauge-chart` version 0.3.0 does not exist
+- Use correct package version that exists in npm registry
 
-4. Problem:
-   ```
-   kgibson@kgibson-ThinkPad-P1-Gen-4i:~/Projects/elantra_head_up_display$ docker compose up --build --no-cache
-   
-   unknown flag: --no-cache
-   ```
+## 4. Invalid Docker Compose Flag
+### Problem
+```bash
+$ docker compose up --build --no-cache
 
-   Solution:
-      --no-cache isn't part of `docker compose up --build`, instead I needed to `docker compose down -v` first and then subsequent `docker compose up --build` would recognize changes to file and not use cache
+unknown flag: --no-cache
+```
+### Solution
+`--no-cache` is not a valid flag for `docker compose up`. Instead:
+1. Use `docker compose down -v` first
+2. Then run `docker compose up --build`
+3. This ensures changes to files are recognized and cache is not used
 
-5. Problem:
+## 5. Duplicate OBD Connection
+### Problem
+The MQTT receive message callback was creating a new OBD connection when handling 'clear dtcs' command, even though there was already an active connection in main.
 
-   In the MQTT receive message callback, when 'clear dtcs' is received, another OBD connection was opened even though there was already one in main.
-
-   Solution:
-
-   Asked agent to fix this and agent passed in existing connection.
+### Solution
+Modified code to:
+1. Pass existing OBD connection through MQTT client's userdata
+2. Access the existing connection in message handler instead of creating new one
+3. Improved error handling for connection status
 
 

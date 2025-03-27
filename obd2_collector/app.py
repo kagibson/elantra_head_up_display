@@ -8,27 +8,36 @@ import os
 MQTT_BROKER = os.getenv('MQTT_BROKER', 'mqtt')
 MQTT_PORT = int(os.getenv('MQTT_PORT', 1883))
 MQTT_TOPIC = 'car/data'
+MQTT_COMMAND_TOPIC = 'car/command'
 
 # OBD2 Commands we want to monitor
 COMMANDS = {
     'rpm': obd.commands.RPM,
     'fuel_level': obd.commands.FUEL_LEVEL,
-    'accelerator_pos': obd.commands.ACCELERATOR_POS_D,
-    'brake_position': obd.commands.BRAKE_POSITION,
-    'gear': obd.commands.CURRENT_GEAR
+    'accelerator_position': obd.commands.RELATIVE_THROTTLE_POS,
+    'dtcs': obd.commands.GET_DTC,  # Add DTC monitoring
 }
 
 def on_connect(client, userdata, flags, rc):
     print(f"Connected to MQTT broker with result code {rc}")
+    client.subscribe(MQTT_COMMAND_TOPIC)
+
+def on_message(client, userdata, msg):
+    try:
+        command = json.loads(msg.payload.decode())
+        if command.get('command') == 'clear_dtcs':
+            print("Clearing DTCs...")
+            connection = userdata.get('obd_connection')
+            if connection and connection.is_connected():
+                response = connection.query(obd.commands.CLEAR_DTC)
+                print(f"DTCs cleared: {response.value}")
+            else:
+                print("No active OBD connection available")
+    except Exception as e:
+        print(f"Error handling command: {e}")
 
 def main():
-    # Connect to MQTT broker
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    client.loop_start()
-
-    # Connect to OBD2 adapter
+    # Connect to OBD2 adapter first
     connection = obd.OBD()
     
     if not connection.is_connected():
@@ -36,6 +45,15 @@ def main():
         return
 
     print("Connected to OBD2 adapter")
+
+    # Connect to MQTT broker
+    client = mqtt.Client(userdata={'obd_connection': connection})
+    client.on_connect = on_connect
+    client.on_message = on_message
+    print(MQTT_BROKER)
+    print(MQTT_PORT)
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_start()
 
     while True:
         data = {}
@@ -47,7 +65,11 @@ def main():
                 if response.is_null():
                     data[key] = None
                 else:
-                    data[key] = response.value.magnitude
+                    if key == 'dtcs':
+                        # Convert DTCs to list of strings
+                        data[key] = [str(dtc) for dtc in response.value]
+                    else:
+                        data[key] = response.value.magnitude
             except Exception as e:
                 print(f"Error reading {key}: {e}")
                 data[key] = None

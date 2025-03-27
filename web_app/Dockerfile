@@ -14,5 +14,8 @@ RUN echo "Current directory:" && pwd && \
     echo "Directory contents:" && ls -la && \
     echo "Public directory contents:" && ls -la public
 
-#CMD ["npm", "start"] 
-CMD ["ls", "-la"]
+# Set host to 0.0.0.0 to allow external connections
+ENV HOST=0.0.0.0
+
+CMD ["npm", "start"] 
+#CMD ["ls", "-la"]

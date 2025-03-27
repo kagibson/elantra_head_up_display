@@ -48,3 +48,23 @@
   Solution:
     gauge-chart has no 0.3.0 version (and has never had one?)
 
+
+4. Problem:
+   ```
+   kgibson@kgibson-ThinkPad-P1-Gen-4i:~/Projects/elantra_head_up_display$ docker compose up --build --no-cache
+   
+   unknown flag: --no-cache
+   ```
+
+   Solution:
+      --no-cache isn't part of `docker compose up --build`, instead I needed to `docker compose down -v` first and then subsequent `docker compose up --build` would recognize changes to file and not use cache
+
+5. Problem:
+
+   In the MQTT receive message callback, when 'clear dtcs' is received, another OBD connection was opened even though there was already one in main.
+
+   Solution:
+
+   Asked agent to fix this and agent passed in existing connection.
+
+

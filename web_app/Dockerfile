@@ -7,6 +7,7 @@ RUN npm install
 
 COPY src ./src
 COPY public/index.html ./public/index.html
+COPY config-overrides.js ./
 
 EXPOSE 3000
 

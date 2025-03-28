@@ -13,6 +13,7 @@ MQTT_COMMAND_TOPIC = 'car/command'
 # OBD2 Commands we want to monitor
 COMMANDS = {
     'rpm': obd.commands.RPM,
+    'speed': obd.commands.SPEED,
     'fuel_level': obd.commands.FUEL_LEVEL,
     'accelerator_position': obd.commands.RELATIVE_THROTTLE_POS,
     'dtcs': obd.commands.GET_DTC,  # Add DTC monitoring

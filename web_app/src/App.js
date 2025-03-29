@@ -122,7 +122,7 @@ function App() {
     setTabIndex(index);
   };
 
-  const HeadsUpDisplay = () => (
+  const LiveData = () => (
     <Box sx={{ 
       display: 'grid', 
       gridTemplateColumns: 'repeat(2, 1fr)', 
@@ -131,17 +131,17 @@ function App() {
         p: 3,
       }
     }}>
-      {/* RPM Gauge */}
+          {/* RPM Gauge */}
       <Paper sx={{ textAlign: 'center' }}>
         <Typography variant="h6" sx={{ mb: 2 }}>Engine RPM</Typography>
         <Box sx={{ position: 'relative', height: 200, mb: 2 }}>
-          <GaugeChart
-            id="rpm-gauge"
-            nrOfLevels={20}
-            percent={Math.min(data.rpm / 8000, 1)}
-            arcWidth={0.3}
-            arcPadding={0.05}
-            cornerRadius={3}
+            <GaugeChart
+              id="rpm-gauge"
+              nrOfLevels={20}
+              percent={Math.min(data.rpm / 8000, 1)}
+              arcWidth={0.3}
+              arcPadding={0.05}
+              cornerRadius={3}
             colors={['#7A8B99', '#C4CCD4']} // Steel colors
             hideText={true}
           />
@@ -159,7 +159,7 @@ function App() {
             {Math.round(data.rpm)}
           </Typography>
         </Box>
-      </Paper>
+          </Paper>
 
       {/* Speed Gauge */}
       <Paper sx={{ textAlign: 'center' }}>
@@ -177,7 +177,7 @@ function App() {
           />
           <Typography 
             variant="h3" 
-            sx={{ 
+                sx={{
               position: 'absolute',
               top: '50%',
               left: '50%',
@@ -193,7 +193,7 @@ function App() {
 
       {/* Engine Load Graph */}
       <Paper sx={{ textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Engine Load History</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>Engine Load History (1 min)</Typography>
         <Box sx={{ 
           height: 200,
           mb: 2,
@@ -214,13 +214,18 @@ function App() {
                 dataKey="time" 
                 type="number"
                 domain={['dataMin', 'dataMax']}
-                tickFormatter={(unixTime) => new Date(unixTime * 1000).toLocaleTimeString()}
+                tickFormatter={(unixTime) => {
+                  const date = new Date(unixTime * 1000);
+                  return `${date.getMinutes()}:${date.getSeconds().toString().padStart(2, '0')}`;
+                }}
                 stroke="#C4CCD4"
+                minTickGap={30}
               />
               <YAxis 
                 domain={[0, 100]} 
                 unit="%" 
                 stroke="#C4CCD4"
+                tickCount={6}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -228,8 +233,12 @@ function App() {
                   border: '1px solid #7A8B99',
                   borderRadius: '4px'
                 }}
-                labelFormatter={(label) => new Date(label * 1000).toLocaleTimeString()}
+                labelFormatter={(unixTime) => {
+                  const date = new Date(unixTime * 1000);
+                  return `${date.getMinutes()}:${date.getSeconds().toString().padStart(2, '0')}`;
+                }}
                 formatter={(value) => [`${value.toFixed(1)}%`, 'Engine Load']}
+                isAnimationActive={false}
               />
               <Line 
                 type="monotone" 
@@ -237,6 +246,7 @@ function App() {
                 stroke="#7A8B99" 
                 dot={false}
                 strokeWidth={2}
+                isAnimationActive={false}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -278,7 +288,7 @@ function App() {
               {[...Array(10)].map((_, index) => (
                 <Box
                   key={index}
-                  sx={{
+                sx={{
                     width: '8px',
                     height: '30px',
                     backgroundColor: index < Math.ceil(data.fuel_level / 10) ? '#7A8B99' : '#3C3C3E',
@@ -329,11 +339,11 @@ function App() {
             </Typography>
           </Box>
         </Box>
-      </Paper>
+          </Paper>
     </Box>
   );
 
-  const Diagnostics = () => {
+  const ErrorCodes = () => {
     const getTimeSinceDTCsClear = () => {
       if (!data.dtc_clear_time) return 'Never cleared';
       
@@ -393,7 +403,7 @@ function App() {
             }}>
               <Typography sx={{ mr: 2, color: 'text.secondary' }}>DTCs Last Cleared:</Typography>
               <Typography 
-                sx={{ 
+                sx={{
                   fontFamily: 'monospace',
                   fontSize: '1.1rem',
                   color: 'text.primary'
@@ -444,10 +454,343 @@ function App() {
           >
             Clear Diagnostic Trouble Codes
           </Button>
-        </Paper>
-      </Box>
+          </Paper>
+        </Box>
     );
   };
+
+  const FreezeFrame = () => (
+    <Box sx={{ p: 3 }}>
+      {/* DTC Section */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Triggering DTC</Typography>
+        <Box sx={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2
+        }}>
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Freeze Frame DTC</Typography>
+            <Typography 
+              sx={{ 
+                fontFamily: 'monospace',
+                fontSize: '1.2rem',
+                letterSpacing: '0.1em',
+                color: data.freeze_dtc ? 'error.main' : 'text.primary'
+              }}
+            >
+              {data.freeze_dtc || 'No freeze frame data available'}
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+
+      {/* Sensor Snapshots Section */}
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Sensor Snapshots</Typography>
+        <Typography sx={{ color: 'text.secondary', mb: 2 }}>
+          Vehicle conditions at the time the DTC was set
+        </Typography>
+
+        {/* Engine Performance */}
+        <Typography variant="subtitle1" sx={{ color: 'primary.main', mt: 3, mb: 2 }}>Engine Performance</Typography>
+        <Box sx={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: 2,
+          mb: 3
+        }}>
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Engine RPM</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.rpm || 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Engine Load</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.engine_load ? `${Math.round(data.engine_load)}%` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Engine Coolant Temperature</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.coolant_temp !== null ? `${Math.round(data.coolant_temp)}°C` : 'N/A'}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Vehicle Speed and Fuel */}
+        <Typography variant="subtitle1" sx={{ color: 'primary.main', mt: 3, mb: 2 }}>Vehicle Speed and Fuel</Typography>
+        <Box sx={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: 2,
+          mb: 3
+        }}>
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Vehicle Speed</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.speed ? `${data.speed} km/h` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Fuel Level</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.fuel_level ? `${Math.round(data.fuel_level)}%` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Fuel Pressure</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.fuel_pressure ? `${data.fuel_pressure} kPa` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Fuel System Status</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.fuel_system_status || 'N/A'}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Air and Temperature */}
+        <Typography variant="subtitle1" sx={{ color: 'primary.main', mt: 3, mb: 2 }}>Air and Temperature</Typography>
+        <Box sx={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: 2,
+          mb: 3
+        }}>
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Intake Manifold Pressure</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.intake_pressure ? `${data.intake_pressure} kPa` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Intake Air Temperature</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.intake_temp !== null ? `${Math.round(data.intake_temp)}°C` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Ambient Air Temperature</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.ambient_temp !== null ? `${Math.round(data.ambient_temp)}°C` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Mass Air Flow Rate</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.maf_air_rate ? `${data.maf_air_rate} g/s` : 'N/A'}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Fuel Trim */}
+        <Typography variant="subtitle1" sx={{ color: 'primary.main', mt: 3, mb: 2 }}>Fuel Trim</Typography>
+        <Box sx={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: 2,
+          mb: 3
+        }}>
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Short Term Fuel Trim Bank 1</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.stft_bank1 !== null ? `${data.stft_bank1}%` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Long Term Fuel Trim Bank 1</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.ltft_bank1 !== null ? `${data.ltft_bank1}%` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Short Term Fuel Trim Bank 2</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.stft_bank2 !== null ? `${data.stft_bank2}%` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Long Term Fuel Trim Bank 2</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.ltft_bank2 !== null ? `${data.ltft_bank2}%` : 'N/A'}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Timing and Throttle */}
+        <Typography variant="subtitle1" sx={{ color: 'primary.main', mt: 3, mb: 2 }}>Timing and Throttle</Typography>
+        <Box sx={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: 2
+        }}>
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Timing Advance</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.timing_advance !== null ? `${data.timing_advance}°` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Throttle Position</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.throttle_position ? `${Math.round(data.throttle_position)}%` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Commanded Throttle Actuator</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.commanded_throttle ? `${Math.round(data.commanded_throttle)}%` : 'N/A'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            p: 2,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'primary.main'
+          }}>
+            <Typography sx={{ color: 'text.secondary', mb: 1 }}>Accelerator Pedal Position</Typography>
+            <Typography sx={{ color: 'text.primary', fontSize: '1.2rem' }}>
+              {data.accelerator_position ? `${Math.round(data.accelerator_position)}%` : 'N/A'}
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+    </Box>
+  );
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -468,7 +811,7 @@ function App() {
               textShadow: '0 0 10px rgba(0, 255, 0, 0.3)',
             }}
           >
-            Car Heads Up Display / Diagnostics
+            OBD2 Scanner
           </Typography>
 
           <Tabs
@@ -488,16 +831,18 @@ function App() {
               }
             }}
           >
-            <Tab label="Heads Up Display" />
-            <Tab label="Diagnostics" />
+            <Tab label="Live Data" />
+            <Tab label="Error Codes" />
+            <Tab label="Freeze Frame" />
           </Tabs>
 
           <SwipeableViews
             index={tabIndex}
             onChangeIndex={handleChangeIndex}
           >
-            <HeadsUpDisplay />
-            <Diagnostics />
+            <LiveData />
+            <ErrorCodes />
+            <FreezeFrame />
           </SwipeableViews>
         </Container>
 

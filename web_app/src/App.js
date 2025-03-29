@@ -3,6 +3,7 @@ import { Box, Container, Paper, Typography, TextField, Button, Dialog, DialogTit
 import SwipeableViews from 'react-swipeable-views-react-18-fix';
 import mqtt from 'mqtt';
 import GaugeChart from 'react-gauge-chart';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const MQTT_BROKER = process.env.REACT_APP_MQTT_BROKER || 'mqtt';
 const MQTT_PORT = process.env.REACT_APP_MQTT_PORT || 9001;
@@ -15,23 +16,29 @@ const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#00ff00',
+      main: '#7A8B99', // Steel blue-gray
     },
     secondary: {
-      main: '#2196F3',
+      main: '#C4CCD4', // Light steel
     },
     background: {
-      default: '#121212',
-      paper: '#1e1e1e',
+      default: '#1C1C1E', // Deep onyx
+      paper: '#2C2C2E', // Lighter onyx
+    },
+    text: {
+      primary: '#E5E5E5', // Light gray
+      secondary: '#A0A0A0', // Medium gray
     },
   },
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
     h4: {
       fontWeight: 600,
+      color: '#C4CCD4', // Light steel
     },
     h6: {
       fontWeight: 500,
+      color: '#7A8B99', // Steel blue-gray
     },
   },
   components: {
@@ -39,10 +46,12 @@ const darkTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-          transition: 'transform 0.2s ease-in-out',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
+          transition: 'all 0.2s ease-in-out',
+          background: 'linear-gradient(145deg, #2C2C2E 0%, #252527 100%)', // Subtle metallic gradient
           '&:hover': {
-            transform: 'translateY(-4px)',
+            boxShadow: '0 8px 12px rgba(0, 0, 0, 0.3)',
+            filter: 'brightness(1.05)',
           },
         },
       },
@@ -66,7 +75,13 @@ function App() {
     speed: 0,
     accelerator_position: 0,
     fuel_level: 0,
-    dtcs: []
+    dtcs: [],
+    vin: '',
+    engine_load_history: [],
+    engine_load: null,
+    coolant_temp: null,
+    ambient_temp: null,
+    dtc_clear_time: null
   });
   const [openDialog, setOpenDialog] = useState(false);
   const [mqttClient, setMqttClient] = useState(null);
@@ -96,6 +111,7 @@ function App() {
       mqttClient.publish(MQTT_COMMAND_TOPIC, JSON.stringify({ command: 'clear_dtcs' }));
     }
     setOpenDialog(false);
+    setData(prevData => ({ ...prevData, dtcs: [], dtc_clear_time: Date.now() }));
   };
 
   const handleChangeTab = (event, newValue) => {
@@ -117,7 +133,7 @@ function App() {
     }}>
       {/* RPM Gauge */}
       <Paper sx={{ textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>RPM</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>Engine RPM</Typography>
         <Box sx={{ position: 'relative', height: 200, mb: 2 }}>
           <GaugeChart
             id="rpm-gauge"
@@ -126,7 +142,7 @@ function App() {
             arcWidth={0.3}
             arcPadding={0.05}
             cornerRadius={3}
-            colors={['#FF5F6D', '#FFC371']}
+            colors={['#7A8B99', '#C4CCD4']} // Steel colors
             hideText={true}
           />
           <Typography 
@@ -136,7 +152,7 @@ function App() {
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              color: 'primary.main',
+              color: '#C4CCD4',
               fontWeight: 'bold',
             }}
           >
@@ -147,7 +163,7 @@ function App() {
 
       {/* Speed Gauge */}
       <Paper sx={{ textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Speed (km/h)</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>Speed (km/h)</Typography>
         <Box sx={{ position: 'relative', height: 200, mb: 2 }}>
           <GaugeChart
             id="speed-gauge"
@@ -156,7 +172,7 @@ function App() {
             arcWidth={0.3}
             arcPadding={0.05}
             cornerRadius={3}
-            colors={['#00BCD4', '#2196F3']}
+            colors={['#7A8B99', '#C4CCD4']} // Steel colors
             hideText={true}
           />
           <Typography 
@@ -166,7 +182,7 @@ function App() {
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              color: '#2196F3',
+              color: '#C4CCD4',
               fontWeight: 'bold',
             }}
           >
@@ -175,68 +191,84 @@ function App() {
         </Box>
       </Paper>
 
-      {/* Accelerator Position */}
+      {/* Engine Load Graph */}
       <Paper sx={{ textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ mb: 2, color: '#4CAF50' }}>Accelerator Pedal Position</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>Engine Load History</Typography>
         <Box sx={{ 
-          height: 200, 
-          display: 'flex', 
-          alignItems: 'flex-end', 
-          justifyContent: 'center',
+          height: 200,
           mb: 2,
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '2px',
-            background: 'linear-gradient(90deg, transparent, #4CAF50, transparent)',
-          }
+          px: 2
         }}>
-          <Box
-            sx={{
-              width: 40,
-              height: `${data.accelerator_position}%`,
-              backgroundColor: '#4CAF50',
-              transition: 'height 0.3s ease-in-out',
-              borderRadius: '4px 4px 0 0',
-              boxShadow: '0 0 10px rgba(76, 175, 80, 0.3)',
-            }}
-          />
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={data.engine_load_history || []}
+              margin={{
+                top: 5,
+                right: 5,
+                left: 5,
+                bottom: 5,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
+              <XAxis 
+                dataKey="time" 
+                type="number"
+                domain={['dataMin', 'dataMax']}
+                tickFormatter={(unixTime) => new Date(unixTime * 1000).toLocaleTimeString()}
+                stroke="#C4CCD4"
+              />
+              <YAxis 
+                domain={[0, 100]} 
+                unit="%" 
+                stroke="#C4CCD4"
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#2C2C2E',
+                  border: '1px solid #7A8B99',
+                  borderRadius: '4px'
+                }}
+                labelFormatter={(label) => new Date(label * 1000).toLocaleTimeString()}
+                formatter={(value) => [`${value.toFixed(1)}%`, 'Engine Load']}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="value" 
+                stroke="#7A8B99" 
+                dot={false}
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </Box>
-        <Typography variant="h3" sx={{ color: '#4CAF50', fontWeight: 'bold' }}>
-          {Math.round(data.accelerator_position)}%
+        <Typography variant="h3" sx={{ color: '#C4CCD4', fontWeight: 'bold' }}>
+          {data.engine_load ? `${Math.round(data.engine_load)}%` : 'N/A'}
         </Typography>
       </Paper>
 
-      {/* Fuel Level Indicator */}
+      {/* Fuel Level and Temperatures */}
       <Paper sx={{ textAlign: 'center', p: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2, color: '#4CAF50' }}>Fuel Level</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>Vehicle Status</Typography>
         <Box sx={{ 
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          position: 'relative',
+          gap: 3,
           height: '200px',
         }}>
-          {/* Content Container */}
+          {/* Fuel Level */}
           <Box sx={{
             display: 'flex',
             alignItems: 'center',
             gap: 2,
-            mt: 2
           }}>
-            {/* Fuel Pump Icon */}
             <Box sx={{ 
-              color: '#4CAF50',
+              color: '#7A8B99',
               fontSize: '24px',
+              width: '24px',
             }}>
               ⛽
             </Box>
             
-            {/* Horizontal Bars Container */}
             <Box sx={{ 
               display: 'flex',
               flexDirection: 'row',
@@ -249,73 +281,173 @@ function App() {
                   sx={{
                     width: '8px',
                     height: '30px',
-                    backgroundColor: index < Math.ceil(data.fuel_level / 10) ? '#4CAF50' : '#333',
+                    backgroundColor: index < Math.ceil(data.fuel_level / 10) ? '#7A8B99' : '#3C3C3E',
                     borderRadius: '4px',
                     transition: 'background-color 0.3s ease'
                   }}
                 />
               ))}
             </Box>
+            <Typography sx={{ color: '#C4CCD4', minWidth: '50px' }}>
+              {Math.round(data.fuel_level)}%
+            </Typography>
           </Box>
-          
-          {/* Fuel Level Text */}
-          <Typography 
-            variant="body1" 
-            sx={{ 
-              color: '#4CAF50',
-              mt: 2
-            }}
-          >
-            {Math.round(data.fuel_level)}%
-          </Typography>
+
+          {/* Coolant Temperature */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}>
+            <Box sx={{ 
+              color: '#7A8B99',
+              fontSize: '24px',
+              width: '24px',
+            }}>
+              🌡️
+            </Box>
+            <Typography sx={{ color: '#C4CCD4' }}>
+              Coolant: {data.coolant_temp !== null ? `${Math.round(data.coolant_temp)}°C` : 'N/A'}
+            </Typography>
+          </Box>
+
+          {/* Ambient Temperature */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}>
+            <Box sx={{ 
+              color: '#7A8B99',
+              fontSize: '24px',
+              width: '24px',
+            }}>
+              🌤️
+            </Box>
+            <Typography sx={{ color: '#C4CCD4' }}>
+              Ambient: {data.ambient_temp !== null ? `${Math.round(data.ambient_temp)}°C` : 'N/A'}
+            </Typography>
+          </Box>
         </Box>
       </Paper>
     </Box>
   );
 
-  const Diagnostics = () => (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Diagnostic Trouble Codes</Typography>
-        <TextField
-          multiline
-          fullWidth
-          rows={12}
-          value={data.dtcs?.length ? data.dtcs.join('\n') : 'No DTCs detected'}
-          InputProps={{
-            readOnly: true,
-            sx: {
-              fontFamily: 'monospace',
+  const Diagnostics = () => {
+    const getTimeSinceDTCsClear = () => {
+      if (!data.dtc_clear_time) return 'Never cleared';
+      
+      const seconds = Math.floor(Date.now() / 1000 - data.dtc_clear_time);
+      if (seconds < 60) return `${seconds} seconds ago`;
+      
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+      
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+      
+      const days = Math.floor(hours / 24);
+      return `${days} day${days === 1 ? '' : 's'} ago`;
+    };
+
+    return (
+      <Box sx={{ p: 3 }}>
+        {/* VIN Display */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Vehicle Information</Typography>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            gap: 2
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
               backgroundColor: 'rgba(0, 0, 0, 0.2)',
-              color: 'primary.main',
-              '& .MuiInputBase-input': {
+              p: 2,
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'primary.main'
+            }}>
+              <Typography sx={{ mr: 2, color: 'text.secondary' }}>VIN:</Typography>
+              <Typography 
+                sx={{ 
+                  fontFamily: 'monospace',
+                  fontSize: '1.2rem',
+                  letterSpacing: '0.1em',
+                  color: 'text.primary'
+                }}
+              >
+                {data.vin || 'Reading VIN...'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              p: 2,
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'primary.main'
+            }}>
+              <Typography sx={{ mr: 2, color: 'text.secondary' }}>DTCs Last Cleared:</Typography>
+              <Typography 
+                sx={{ 
+                  fontFamily: 'monospace',
+                  fontSize: '1.1rem',
+                  color: 'text.primary'
+                }}
+              >
+                {getTimeSinceDTCsClear()}
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+
+        {/* DTCs Display */}
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Diagnostic Trouble Codes</Typography>
+          <TextField
+            multiline
+            fullWidth
+            rows={12}
+            value={data.dtcs?.length ? data.dtcs.join('\n') : 'No DTCs detected'}
+            InputProps={{
+              readOnly: true,
+              sx: {
                 fontFamily: 'monospace',
-              },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'primary.main',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'primary.main',
-              },
-            }
-          }}
-        />
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={() => setOpenDialog(true)}
-          sx={{ 
-            mt: 2,
-            '&:hover': {
-              boxShadow: '0 0 15px rgba(0, 255, 0, 0.3)',
-            }
-          }}
-        >
-          Clear Diagnostic Trouble Codes
-        </Button>
-      </Paper>
-    </Box>
-  );
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                color: 'primary.main',
+                '& .MuiInputBase-input': {
+                  fontFamily: 'monospace',
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'primary.main',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'primary.main',
+                },
+              }
+            }}
+          />
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => setOpenDialog(true)}
+            sx={{ 
+              mt: 2,
+              '&:hover': {
+                boxShadow: '0 0 15px rgba(0, 255, 0, 0.3)',
+              }
+            }}
+          >
+            Clear Diagnostic Trouble Codes
+          </Button>
+        </Paper>
+      </Box>
+    );
+  };
 
   return (
     <ThemeProvider theme={darkTheme}>

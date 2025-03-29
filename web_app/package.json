@@ -12,6 +12,7 @@
     "react-gauge-chart": "^0.4.1",
     "react-scripts": "5.0.1",
     "react-swipeable-views-react-18-fix": "^0.14.1",
+    "recharts": "^2.12.2",
     "url": "^0.11.0",
     "crypto-browserify": "^3.12.0",
     "stream-browserify": "^3.0.0",

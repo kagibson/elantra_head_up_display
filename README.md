@@ -7,7 +7,7 @@ In recent months, there has been a lot of talk of "vibe coding" - where develope
 
 As a professional software developer, I wanted to get a sense of whether this is pure hype or if I will soon be replaced by an AI agent. In order to evaluate the current state of AI code generation, I decided to use Cursor to create a small application to interface with my car using an ELM327 USB Adapter OBD2. Since the engine light was active on my dashboard, I thought this could be a good quick project.
 
-![OBD2 Scanner Demo](OBD2-Scanner.gif)
+![OBD2 Scanner Demo](media/OBD2-Scanner.gif)
 
 ## Features
 - Real-time monitoring of:

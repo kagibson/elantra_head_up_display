@@ -2,12 +2,13 @@
 
 A real-time car diagnostics dashboard that interfaces with your car's OBD2 port to display vital information and diagnostic trouble codes (DTCs).
 
+![OBD2 Scanner Demo](media/OBD2-Scanner.gif)
+
+
 ## Overview
 In recent months, there has been a lot of talk of "vibe coding" - where developers describe their desired functionality to LLMs which then generate the corresponding code. Rather than writing code manually, the developer's role shifts to guiding the AI, testing the output, and refining the implementation. Anthropic CEO Dario Amodei is even going as far as suggesting that within 3-6 months, AI could be writing 90% of code.
 
 As a professional software developer, I wanted to get a sense of whether this is pure hype or if I will soon be replaced by an AI agent. In order to evaluate the current state of AI code generation, I decided to use Cursor to create a small application to interface with my car using an ELM327 USB Adapter OBD2. Since the engine light was active on my dashboard, I thought this could be a good quick project.
-
-![OBD2 Scanner Demo](media/OBD2-Scanner.gif)
 
 ## Features
 - Real-time monitoring of:
@@ -61,6 +62,9 @@ Is there anything else you need from me?
 ```
 
 ### Iterative Development
+
+![Car HUD with active DTC](media/CarHUDWithActiveDTC.gif)
+
 The application evolved through several iterations:
 1. Basic OBD2 data display with RPM and speed gauges
 2. Addition of DTC monitoring and clearing functionality

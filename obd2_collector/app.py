@@ -129,7 +129,7 @@ class OBD2Collector:
             if not self.live_data['vin']:
                 vin_response = self.connection.query(obd.commands.VIN)
                 if not vin_response.is_null():
-                    self.live_data['vin'] = vin_response.value
+                    self.live_data['vin'] = vin_response.value.decode()
 
         except Exception as e:
             logging.error(f"Error collecting live data: {e}")
@@ -206,6 +206,7 @@ class OBD2Collector:
             if self.freeze_frame_data:
                 data_to_publish.update(self.freeze_frame_data)
 
+            logging.info("Publishing data")
             self.mqtt_client.publish(MQTT_TOPIC, json.dumps(data_to_publish))
         except Exception as e:
             logging.error(f"Error publishing data: {e}")

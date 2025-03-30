@@ -1,4 +1,4 @@
-# Car Heads Up Display / Diagnostics
+# OBD2 Scanner
 
 A real-time car diagnostics dashboard that interfaces with your car's OBD2 port to display vital information and diagnostic trouble codes (DTCs).
 
@@ -7,17 +7,20 @@ In recent months, there has been a lot of talk of "vibe coding" - where develope
 
 As a professional software developer, I wanted to get a sense of whether this is pure hype or if I will soon be replaced by an AI agent. In order to evaluate the current state of AI code generation, I decided to use Cursor to create a small application to interface with my car using an ELM327 USB Adapter OBD2. Since the engine light was active on my dashboard, I thought this could be a good quick project.
 
+![OBD2 Scanner Demo](OBD2-Scanner.gif)
+
 ## Features
 - Real-time monitoring of:
   - Engine RPM with gauge display
-  - Accelerator pedal position
+  - Vehicle speed with gauge display
+  - Engine load with 1-minute history graph
   - Fuel level
+  - Coolant and ambient temperatures
   - Diagnostic Trouble Codes (DTCs)
+- DTC freeze frame data showing vehicle conditions at time of fault
 - Ability to clear DTCs with confirmation dialog
 - Modern, dark-themed UI with responsive design
 - 10Hz update rate for real-time data
-
-![Car HUD with Pretty UI](media/CarHUDPrettier.gif)
 
 ## Architecture
 The application consists of three Docker containers:
@@ -59,11 +62,15 @@ Is there anything else you need from me?
 
 ### Iterative Development
 The application evolved through several iterations:
-1. Basic OBD2 data display
-2. Addition of DTC monitoring:
-![Car HUD with Active DTC](media/CarHUDWithActiveDTC.gif)
-3. Implementation of DTC clearing functionality
-4. UI improvements and dark theme
+1. Basic OBD2 data display with RPM and speed gauges
+2. Addition of DTC monitoring and clearing functionality
+3. Implementation of freeze frame data capture
+4. UI improvements including:
+   - Dark theme
+   - Swipeable views
+   - Engine load history graph
+   - Temperature displays
+   - Comprehensive freeze frame data view
 
 ### Challenges and Solutions
 During development, several issues were encountered and resolved:

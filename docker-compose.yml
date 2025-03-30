@@ -14,11 +14,13 @@ services:
 
   obd2_collector:
     build: ./obd2_collector
-    #devices:
-    #  - /dev/ttyUSB0:/dev/ttyUSB0
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
     environment:
       - MQTT_BROKER=mqtt
       - MQTT_PORT=1883
+    volumes:
+      - ./obd2_collector/app.py:/app/app.py
     depends_on:
       - mqtt
 
